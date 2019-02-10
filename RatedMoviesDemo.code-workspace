@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "RatedMoviesDemo.Api"
+		},
+		{
+			"path": "RatedMoviesDemo.Api.Tests"
+		},
+		{
+			"path": "RatedMoviesDemo.Repository"
+		}
+	]
+}
