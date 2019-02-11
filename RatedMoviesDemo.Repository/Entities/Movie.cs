@@ -10,7 +10,7 @@ namespace RatedMoviesDemo.Repository.Entities
         public int YearOfRelease { get; set; }
         public int RunningTimeInMinutes { get; set; }
         public decimal AverageRating { get; set; }
-        public IEnumerable<Genre> Genres { get; set; }
+        public IEnumerable<MovieGenre> Genres { get; set; }
         public IEnumerable<UserMovieRating> Ratings { get; set; }
     }
 }

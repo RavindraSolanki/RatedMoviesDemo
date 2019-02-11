@@ -27,9 +27,17 @@ namespace RatedMoviesDemo.Repository
         {
             modelBuilder.Entity<MovieGenre>()
                 .HasKey(_ => new { _.MovieId, _.GenreId });
+            modelBuilder.Entity<MovieGenre>()
+                .HasOne(_ => _.Movie)
+                .WithMany(_ => _.Genres)
+                .HasForeignKey(_ => _.MovieId);
+            modelBuilder.Entity<MovieGenre>()
+                .HasOne(_ => _.Genre)
+                .WithMany(_ => _.Movies)
+                .HasForeignKey(_ => _.GenreId);
 
             modelBuilder.Entity<UserMovieRating>()
-                .HasKey(_ => new { _.UserId, _.MovieId });
+                .HasKey(_ => new { _.UserId, _.MovieId });            
         }
     }
 }

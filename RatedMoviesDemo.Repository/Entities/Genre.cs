@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace RatedMoviesDemo.Repository.Entities
 {
@@ -6,5 +7,6 @@ namespace RatedMoviesDemo.Repository.Entities
     {
         public int Id { get; set; }
         public string Name { get; set; }
+        public IEnumerable<MovieGenre> Movies { get; set; }
     }
 }
