@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using RatedMoviesDemo.Repository;
 using RatedMoviesDemo.Repository.Entities;
 
@@ -6,18 +7,18 @@ namespace RatedMoviesDemo.Api.Tests.Utilities
 {
     public class InMemoryTestRatedMoviesDatabase
     {
-        private DbContextOptions<RatedMoviesContext> _ratedMoviesContextOptions;
+        public DbContextOptions<RatedMoviesContext> RatedMoviesContextOptions { get; }
 
-        public InMemoryTestRatedMoviesDatabase()
+        public InMemoryTestRatedMoviesDatabase(string databaseName)
         {
-            _ratedMoviesContextOptions = new DbContextOptionsBuilder<RatedMoviesContext>()
-                .UseInMemoryDatabase(databaseName: "testratedmoviesdatabase")
+            RatedMoviesContextOptions = new DbContextOptionsBuilder<RatedMoviesContext>()
+                .UseInMemoryDatabase(databaseName: databaseName)
                 .Options;
         }
 
         public void SeedTestData()
         {
-            using (var context = new RatedMoviesContext(_ratedMoviesContextOptions))
+            using (var context = new RatedMoviesContext(RatedMoviesContextOptions))
             {
                 context.Genres.Add(new Genre { Id = 1, Name = "horror" });
                 context.Genres.Add(new Genre { Id = 2, Name = "romance" });

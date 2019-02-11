@@ -1,45 +1,54 @@
-using System.Net;
+using System;
+using Microsoft.AspNetCore.Mvc;
 using Xunit;
+using RatedMoviesDemo.Api.Controllers;
+using RatedMoviesDemo.Repository;
 using RatedMoviesDemo.Api.Tests.Utilities;
 
 namespace RatedMoviesDemo.Api.Tests
 {
     public class MoviesControllerTests
     {
-        private InMemoryTestServer _testServer;
+        private MoviesController _moviesController;
         private InMemoryTestRatedMoviesDatabase _testDatabase;
 
         public MoviesControllerTests()
         {
-            _testServer = new InMemoryTestServer();
-            _testDatabase = new InMemoryTestRatedMoviesDatabase();
+            _testDatabase = new InMemoryTestRatedMoviesDatabase(RandomString.GetString(10));
             _testDatabase.SeedTestData();
+            _moviesController = new MoviesController(new RatedMoviesContext(_testDatabase.RatedMoviesContextOptions));
         }
 
         [Fact]
-        public async void GetReturnsBadRequestWhenNoFilter()
+        public void GetReturnsBadRequestWhenNoFilter()
         {
-            var response = await _testServer.Client.GetAsync("api/movies");
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var response = _moviesController.Get();
+            Assert.IsType<BadRequestObjectResult>(response.Result);
         }
-        
+
         [Theory]
-        [InlineData("api/movies?title=alien")]
-        [InlineData("api/movies?year=1979")]
-        [InlineData("api/movies?genres=drama")]
-        [InlineData("api/movies?genres=drama&genres=romance")]
-        [InlineData("api/movies?title=alien&year=1979&genres=sci-fi")]
-        public async void GetWithFiltersReturnsMovies(string urlWithFilters)
+        [InlineData("alien", null, null)]
+        [InlineData(null, 1979, null)]
+        [InlineData(null, null, new [] { "drama" })]
+        [InlineData(null, null, new[] { "drama", "romance" })]
+        [InlineData("alien", 1979, new[] { "sci-fi" })]
+        public void GetWithFiltersReturnsMovies(string title, int? year, string[] genres)
         {
-            var response = await _testServer.Client.GetAsync(urlWithFilters);
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            uint? yearUint = new uint?();
+            if (year.HasValue)
+            {
+                yearUint = Convert.ToUInt32(year.Value);
+            }
+            var response = _moviesController.Get(title, yearUint, genres);
+            var okResult = response.Result as OkObjectResult;
+            var toto = okResult.Value;
         }
 
         [Fact]
-        public async void GetWithFiltersNoMovieFound()
+        public void GetWithFiltersNoMovieFound()
         {
-            var response = await _testServer.Client.GetAsync("api/movies?title=notfoundmovie");
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var response = _moviesController.Get("notfoundmovie");
+            Assert.IsType<NotFoundObjectResult>(response.Result);
         }
     }
 }
