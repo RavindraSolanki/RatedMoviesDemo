@@ -8,7 +8,18 @@ namespace RatedMoviesDemo.Api.Tests.Extensions
     {
         public static bool IsInDescendingOrEqualsOrder(this IEnumerable<decimal> decimalNumbers)
         {
-            throw new NotImplementedException();
+            var enumerator = decimalNumbers.GetEnumerator();
+
+            var firstOrPrevious = decimal.MaxValue;
+            while(enumerator.MoveNext())
+            {
+                if (firstOrPrevious < enumerator.Current)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

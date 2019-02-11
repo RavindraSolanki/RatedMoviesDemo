@@ -37,7 +37,15 @@ namespace RatedMoviesDemo.Repository
                 .HasForeignKey(_ => _.GenreId);
 
             modelBuilder.Entity<UserMovieRating>()
-                .HasKey(_ => new { _.UserId, _.MovieId });            
+                .HasKey(_ => new { _.UserId, _.MovieId });
+            modelBuilder.Entity<UserMovieRating>()
+                .HasOne(_ => _.User)
+                .WithMany(_ => _.RatedMovies)
+                .HasForeignKey(_ => _.UserId);
+            modelBuilder.Entity<UserMovieRating>()
+                .HasOne(_ => _.Movie)
+                .WithMany(_ => _.Ratings)
+                .HasForeignKey(_ => _.MovieId);
         }
     }
 }
