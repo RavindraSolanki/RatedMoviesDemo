@@ -7,10 +7,13 @@ namespace RatedMoviesDemo.Api.Tests
     public class MoviesControllerTests
     {
         private InMemoryTestServer _testServer;
+        private InMemoryTestRatedMoviesDatabase _testDatabase;
 
         public MoviesControllerTests()
         {
             _testServer = new InMemoryTestServer();
+            _testDatabase = new InMemoryTestRatedMoviesDatabase();
+            _testDatabase.SeedTestData();
         }
 
         [Fact]
