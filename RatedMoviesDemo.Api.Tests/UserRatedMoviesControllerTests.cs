@@ -1,90 +1,106 @@
 ﻿using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
 using System.Linq;
-using Newtonsoft.Json;
+using Microsoft.AspNetCore.Mvc;
 using Xunit;
-using RatedMoviesDemo.Repository.Entities;
 using RatedMoviesDemo.Api.Tests.Extensions;
 using RatedMoviesDemo.Api.Tests.Utilities;
+using RatedMoviesDemo.Api.Controllers;
+using RatedMoviesDemo.Repository;
+using RatedMoviesDemo.Repository.Entities;
 
 namespace RatedMoviesDemo.Api.Tests
 {
     public class UserRatedMoviesControllerTests
     {
-        private InMemoryTestServer _testServer;
+        private UserRatedMoviesController _userRatedMoviesController;
+        private InMemoryTestRatedMoviesDatabase _testDatabase;
 
         public UserRatedMoviesControllerTests()
         {
-            _testServer = new InMemoryTestServer();
+            _testDatabase = new InMemoryTestRatedMoviesDatabase(RandomString.GetString(10));
+            _testDatabase.SeedTestData();
+            _userRatedMoviesController = new UserRatedMoviesController(new RatedMoviesContext(_testDatabase.RatedMoviesContextOptions));
         }
 
         [Fact]
-        public async void GetReturnsFiveMovies()
+        public void GetReturnsFiveMovies()
         {
-            var response = await _testServer.Client.GetAsync("api/userratedmovies");
+            var response = _userRatedMoviesController.Get(1);
 
-            var jsonContent = await response.Content.ReadAsStringAsync();
-            var movies = JsonConvert.DeserializeObject<List<Movie>>(jsonContent);
+            var okResponse = response.Result as OkObjectResult;
+            var movies = okResponse.Value as IEnumerable<Movie>;
 
-            Assert.Equal(5, movies.Count);
+            Assert.Equal(5, movies.Count());
         }
 
         [Fact]
-        public async void GetReturnsFiveMoviesWithAverageRatingInDescendingOrder()
+        public void GetReturnsFiveMoviesWithAverageRatingInDescendingOrder()
         {
-            var response = await _testServer.Client.GetAsync("api/userratedmovies");
+            var response = _userRatedMoviesController.Get(1);
 
-            var jsonContent = await response.Content.ReadAsStringAsync();
-            var movies = JsonConvert.DeserializeObject<IEnumerable<Movie>>(jsonContent);
+            var okResponse = response.Result as OkObjectResult;
+            var movies = okResponse.Value as IEnumerable<Movie>;
 
             var ratings = movies.Select(_ => _.AverageRating);
             Assert.True(ratings.IsInDescendingOrEqualsOrder());
         }
 
         [Fact]
-        public async void PostAddsNewRating()
+        public void PostAddsNewRating()
         {
-            var jsonRating = JsonConvert.SerializeObject(new UserMovieRating
-            {
-                UserId = 1,
-                MovieId = 1,
-                Rating = 4
-            });
-            var ratingContent = new StringContent(jsonRating);
-            var response = await _testServer.Client.PostAsync("api/userratedmovies", ratingContent);
+            var userIdFromTestDatabase = 1;
+            var movieWithNoRatingFromUser = 12;
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var response = _userRatedMoviesController.Post(new UserMovieRating
+            {
+                UserId = userIdFromTestDatabase,
+                MovieId = movieWithNoRatingFromUser,
+                Rating = 3
+            });
+
+            using (var context = new RatedMoviesContext(_testDatabase.RatedMoviesContextOptions))
+            {
+                var userRating = context.UserMovieRatings
+                    .SingleOrDefault(_ => _.UserId == userIdFromTestDatabase && _.MovieId == movieWithNoRatingFromUser);
+
+                Assert.NotNull(userRating);
+            }
         }
 
         [Fact]
-        public async void PostOverridesExistingRating()
+        public  void PostOverridesExistingRating()
         {
-            var jsonRating = JsonConvert.SerializeObject(new UserMovieRating
-            {
-                UserId = 1,
-                MovieId = 2,
-                Rating = 4
-            });
-            var ratingContent = new StringContent(jsonRating);
-            var response = await _testServer.Client.PostAsync("api/userratedmovies", ratingContent);
+            var userIdFromTestDatabase = 1;
+            var movieWithExistingRatingFromUser = 12;
+            var modifiedRating = (uint)5;
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var response = _userRatedMoviesController.Post(new UserMovieRating
+            {
+                UserId = userIdFromTestDatabase,
+                MovieId = movieWithExistingRatingFromUser,
+                Rating = modifiedRating
+            });
+
+            using (var context = new RatedMoviesContext(_testDatabase.RatedMoviesContextOptions))
+            {
+                var userRating = context.UserMovieRatings
+                    .Single(_ => _.UserId == userIdFromTestDatabase && _.MovieId == movieWithExistingRatingFromUser);
+
+                Assert.Equal(modifiedRating, userRating.Rating);
+            }
         }
 
         [Fact]
-        public async void PostWithInvalidRatingReturnsBadRequest()
+        public  void PostWithInvalidRatingReturnsBadRequest()
         {
-            var jsonRating = JsonConvert.SerializeObject(new UserMovieRating
+            var response = _userRatedMoviesController.Post(new UserMovieRating
             {
                 UserId = 1,
                 MovieId = 1,
                 Rating = 7
             });
-            var ratingContent = new StringContent(jsonRating);
-            var response = await _testServer.Client.PostAsync("api/userratedmovies", ratingContent);
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.IsType<BadRequestObjectResult>(response);
         }
     }
 }

@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using RatedMoviesDemo.Api.Extensions;
+using RatedMoviesDemo.Repository;
 using RatedMoviesDemo.Repository.Entities;
+
 
 namespace RatedMoviesDemo.Api.Controllers
 {
@@ -9,16 +13,54 @@ namespace RatedMoviesDemo.Api.Controllers
     [ApiController]
     public class UserRatedMoviesController : ControllerBase
     {
-        [HttpGet]
-        public ActionResult<IEnumerable<Movie>> Get([FromQuery] int userid)
+        private RatedMoviesContext _ratedMoviesContext;
+
+        public UserRatedMoviesController(RatedMoviesContext ratedMoviesContext)
         {
-            throw new NotImplementedException();
+            _ratedMoviesContext = ratedMoviesContext;
+        }
+
+        [HttpGet]
+        public ActionResult<IEnumerable<Movie>> Get([FromQuery] int userId)
+        {
+            var top5UsersMoviesRating = (
+                from rating in _ratedMoviesContext.UserMovieRatings
+                where rating.UserId == userId
+                group rating by rating.MovieId into movieGroup
+                join movie in _ratedMoviesContext.Movies on movieGroup.Key equals movie.Id
+                orderby movieGroup.Average(_ => _.Rating) descending, movie.Title
+                select new
+                {
+                    Id = movieGroup.Key,
+                    AverageRating = movieGroup.Average(_ => _.Rating)
+                }).Take(5);
+
+            var movies = _ratedMoviesContext
+                .Movies
+                .Where(_ => top5UsersMoviesRating.Select(top => top.Id).Contains(_.Id));
+
+            foreach (var movie in movies)
+            {
+                movie.AverageRating = ((decimal)top5UsersMoviesRating
+                    .Single(_ => _.Id == movie.Id)
+                    .AverageRating).RoundToNearestPoint5();
+            }
+
+            return Ok(movies);
         }
 
         [HttpPost]
-        public ActionResult Post([FromBody] int userId, [FromBody] int movieId, [FromBody] int rating)
+        public ActionResult Post(UserMovieRating userMovieRating)
         {
-            throw new NotImplementedException();
+            if (userMovieRating.Rating < 1 || userMovieRating.Rating > 5)
+            {
+                return BadRequest("rating should be between 1 and 5");
+            }
+
+            _ratedMoviesContext.UserMovieRatings.Add(userMovieRating);
+            _ratedMoviesContext.SaveChanges();
+
+            return Ok();
         }
     }
 }
