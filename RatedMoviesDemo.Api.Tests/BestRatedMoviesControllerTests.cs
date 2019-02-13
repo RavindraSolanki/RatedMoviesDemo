@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
+using Newtonsoft.Json;
 using RatedMoviesDemo.Api.Tests.Extensions;
 using RatedMoviesDemo.Api.Tests.Utilities;
 using RatedMoviesDemo.Api.Controllers;
@@ -12,34 +13,36 @@ namespace RatedMoviesDemo.Api.Tests
 {
     public class BestRatedMoviesControllerTests
     {
-        private BestRatedMoviesController _bestRatedMoviesController;
         private InMemoryTestRatedMoviesDatabase _testDatabase;
+        private InMemoryTestServer _testServer;
 
         public BestRatedMoviesControllerTests()
         {
-            _testDatabase = new InMemoryTestRatedMoviesDatabase(RandomString.GetString(10));
+            var uniquePerTestDatabaseIdentifier = RandomString.GetString(10);
+            _testDatabase = new InMemoryTestRatedMoviesDatabase(uniquePerTestDatabaseIdentifier);
             _testDatabase.SeedTestData();
-            _bestRatedMoviesController = new BestRatedMoviesController(new RatedMoviesContext(_testDatabase.RatedMoviesContextOptions));
+
+            _testServer = new InMemoryTestServer(_testDatabase.RatedMoviesContextOptions);
         }
 
         [Fact]
-        public void GetReturnsFiveMovies()
+        public async void GetReturnsFiveMovies()
         {
-            var response = _bestRatedMoviesController.Get();
+            var response = await _testServer.Client.GetAsync("api/bestratedmovies");
 
-            var okResponse = response.Result as OkObjectResult;
-            var movies = okResponse.Value as IEnumerable<Movie>;
-
-            Assert.Equal(5, movies.Count());
+            var jsonContent = await response.Content.ReadAsStringAsync();
+            var movies = JsonConvert.DeserializeObject<List<Movie>>(jsonContent);
+            
+            Assert.Equal(5, movies.Count);
         }
 
         [Fact]
-        public void GetReturnsFiveMoviesWithAverageRatingInDescendingOrder()
+        public async void GetReturnsFiveMoviesWithAverageRatingInDescendingOrder()
         {
-            var response = _bestRatedMoviesController.Get();
+            var response = await _testServer.Client.GetAsync("api/bestratedmovies");
 
-            var okResponse = response.Result as OkObjectResult;
-            var movies = okResponse.Value as IEnumerable<Movie>;
+            var jsonContent = await response.Content.ReadAsStringAsync();
+            var movies = JsonConvert.DeserializeObject<List<Movie>>(jsonContent);
 
             var ratings = movies.Select(_ => _.AverageRating);
             Assert.True(ratings.IsInDescendingOrEqualsOrder());

@@ -21,7 +21,8 @@ namespace RatedMoviesDemo.Api.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Movie>> Get([FromQuery] int userId)
+        [Route("{userId:int}")]
+        public ActionResult<IEnumerable<Movie>> Get(int userId)
         {
             var top5UsersMoviesRating = (
                 from rating in _ratedMoviesContext.UserMovieRatings
@@ -50,12 +51,15 @@ namespace RatedMoviesDemo.Api.Controllers
         }
 
         [HttpPost]
-        public ActionResult Post(UserMovieRating userMovieRating)
+        [Route("{userId:int}")]
+        public ActionResult Post(int UserId, [FromBody] UserMovieRating userMovieRating)
         {
             if (userMovieRating.Rating < 1 || userMovieRating.Rating > 5)
             {
                 return BadRequest("rating should be between 1 and 5");
             }
+
+            userMovieRating.UserId = UserId;
 
             _ratedMoviesContext.UserMovieRatings.Add(userMovieRating);
             _ratedMoviesContext.SaveChanges();
